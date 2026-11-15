@@ -21,7 +21,9 @@ const ERRORS: Record<string, string> = {
 export async function askMochi(messages: { role: string; text: string }[], localDate: string) {
   try {
     // US region: Gemini's free tier isn't offered everywhere, and the nearest region may be one of those places.
-    const { data, error } = await supabase.functions.invoke('ask-mochi', { body: { messages, localDate }, region: FunctionRegion.UsEast1 })
+    let { data, error } = await supabase.functions.invoke('ask-mochi', { body: { messages, localDate }, region: FunctionRegion.UsEast1 })
+    // An older deployed function may not accept the region header; fall back to the default region.
+    if (error?.name === 'FunctionsFetchError') ({ data, error } = await supabase.functions.invoke('ask-mochi', { body: { messages, localDate } }))
     if (!error && data?.text) return { ok: true as const, data }
     let body: { error?: string; detail?: string; status?: number; message?: string; msg?: string } = data ?? {}
     let status: number | string = ''
