@@ -1,0 +1,75 @@
+/* Hallmark · genre: playful · theme: custom (vibe: soft rose, calm study room)
+ * type: Plus Jakarta Sans · axes: light / rounded-sans / warm
+ * ALL colours and fonts live in the @theme block below. Change them here only. */
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --color-paper: #FFF7F9;      /* page background */
+  --color-surface: #FFFFFF;    /* cards */
+  --color-ink: #2E1F2B;        /* main text, 14.8:1 on paper */
+  --color-muted: #6B5866;      /* secondary text, 6.2:1 on paper */
+  --color-line: #F0DDE5;       /* hairlines */
+  --color-field: #9C8394;      /* input borders */
+
+  --color-rose: #B23A68;       /* primary action, 5.7:1 with white */
+  --color-rose-dark: #8C2852;
+  --color-rose-soft: #FCE4EE;
+  --color-track: #E8CFDA;
+
+  /* day types: soft background + readable text */
+  --color-read-bg: #FCE4EE;  --color-read-fg: #8C2852;
+  --color-q-bg: #EFE8FB;     --color-q-fg: #5B3F96;
+  --color-exam-bg: #FDE8DA;  --color-exam-fg: #8A4512;
+  --color-rest-bg: #E3F3EC;  --color-rest-fg: #2C6B52;
+  --color-water: #2F628F;    --color-water-soft: #E4EEF7;
+  --color-focus-ring: #5B3F96;
+}
+
+@layer base {
+  html, body { overflow-x: clip; }
+  body { @apply bg-paper text-ink font-sans antialiased; font-size: 17px; line-height: 1.55; }
+  h1, h2, h3 { font-style: normal; }
+  a { color: var(--color-rose); }
+  a:hover { color: var(--color-rose-dark); }
+  :focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; border-radius: 8px; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: .55; }
+}
+
+@layer components {
+  .card { @apply bg-surface border border-line rounded-2xl p-4; }
+  
+  .btn, .btn-primary, .btn-secondary { @apply inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-full font-semibold text-base no-underline whitespace-nowrap transition-transform select-none; }
+  .btn:active, .btn-primary:active, .btn-secondary:active { transform: translateY(1px); }
+  .btn-primary { @apply bg-rose text-white border-0; }
+  .btn-primary:hover { @apply bg-rose-dark text-white; }
+  .btn-secondary { @apply bg-surface text-ink border border-field; }
+  .btn-secondary:hover { @apply bg-rose-soft text-ink; }
+  .btn-text { @apply inline-flex items-center min-h-11 px-2 font-semibold text-rose bg-transparent border-0; }
+  .chip { @apply inline-flex items-center min-h-12 px-4 rounded-full border border-field bg-surface text-ink font-medium; }
+  .chip[aria-pressed="true"] { @apply bg-rose border-rose text-white font-semibold; }
+  .input { @apply w-full min-h-13 px-3.5 rounded-xl border border-field bg-surface text-ink text-[17px]; }
+  .label { @apply block font-semibold text-base mb-2; }
+  .hint { @apply text-sm text-muted leading-snug; }
+  .h1 { @apply text-[26px] font-bold leading-tight tracking-tight; }
+  .h2 { @apply text-lg font-bold leading-snug; }
+  .bar { @apply h-2.5 rounded-full bg-rose-soft relative overflow-hidden; }
+  .bar > span { @apply absolute inset-y-0 left-0 rounded-full bg-rose; }
+}
+
+/* Mochi reactions: play once, short, never loop. */
+@keyframes mochi-pop { 0% { transform: scale(1) } 40% { transform: scale(1.08) rotate(-3deg) } 100% { transform: scale(1) } }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
+.mochi-react { animation: mochi-pop .6s ease-out 1; transform-origin: 50% 90%; }
+.bubble-in { animation: bubble-in .25s ease-out 1; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media print {
+  nav, .no-print { display: none !important; }
+  body { background: #fff; font-size: 12pt; }
+  .card { border-color: #ccc; }
+}

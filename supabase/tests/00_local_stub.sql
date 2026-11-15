@@ -1,0 +1,10 @@
+create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
+create schema auth;
+create table auth.users (id uuid primary key, email text);
+create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims', true),''),'{}')::jsonb $$;
+create function auth.uid() returns uuid language sql stable as $$ select nullif(auth.jwt()->>'sub','')::uuid $$;
+grant usage on schema auth to authenticated, anon;
+grant execute on all functions in schema auth to authenticated, anon;
+grant usage on schema public to authenticated, anon;
+alter default privileges in schema public grant all on tables to authenticated;
+insert into auth.users values ('11111111-1111-1111-1111-111111111111','azka@x.com'),('22222222-2222-2222-2222-222222222222','mum@x.com'),('33333333-3333-3333-3333-333333333333','stranger@x.com');

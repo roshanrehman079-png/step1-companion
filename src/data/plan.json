@@ -1,0 +1,593 @@
+{
+ "version": "3.0.0",
+ "startDate": "2026-11-16",
+ "examDate": "2026-12-30",
+ "days": [
+  {
+   "date": "2026-11-16",
+   "mode": "QUESTION",
+   "topic": "Setup and calibrated UWorld",
+   "instructions": "Configure timed 20-question blocks, complete 2 blocks (mixed fresh), review mistakes, make single error log.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 40,
+   "qStretch": 60,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-17",
+   "mode": "NBME",
+   "topic": "NBME 1: baseline",
+   "instructions": "Unused official CBSSA, standard-paced, closed book in one sitting; do not check answers during test.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-18",
+   "mode": "NBME REVIEW",
+   "topic": "NBME 1 analysis",
+   "instructions": "Use official rationales; classify wrong/guessed responses and identify 3 weakest domains.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-19",
+   "mode": "BOOK",
+   "topic": "Biochemistry",
+   "instructions": "Full First Aid Biochemistry review: pathways, vitamins, genetics, molecular biology, inherited diseases.",
+   "bookSubject": "biochemistry",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-20",
+   "mode": "QUESTION",
+   "topic": "Biochemistry application",
+   "instructions": "3 \u00d7 20 questions timed blocks: biochemistry + mixed previous topics. Review all missed/guessed.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-21",
+   "mode": "QUESTION",
+   "topic": "Mixed foundation and biochemistry",
+   "instructions": "3 \u00d7 20 questions timed blocks, mostly mixed with 20 questions biochemistry weakness.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-22",
+   "mode": "RECOVERY",
+   "topic": "Recovery and recall buffer",
+   "instructions": "Rest, review small existing Anki set and top NBME notes; optional 20 questions only if fresh.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": true
+  },
+  {
+   "date": "2026-11-23",
+   "mode": "BOOK",
+   "topic": "Immunology",
+   "instructions": "Full First Aid Immunology review: immune cells, hypersensitivity, deficiencies, autoimmune disease and transplantation.",
+   "bookSubject": "immunology",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-24",
+   "mode": "QUESTION",
+   "topic": "Immunology practice",
+   "instructions": "3 \u00d7 20 questions timed blocks: 20 immune + 40 mixed.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-25",
+   "mode": "BOOK",
+   "topic": "General Pathology I",
+   "instructions": "First Aid general pathology + Pathoma chapters 1 (cell injury/adaptation) and 2 (inflammation/wound healing).",
+   "bookSubject": "general_pathology",
+   "bookTargetPct": 50,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-26",
+   "mode": "BOOK",
+   "topic": "General Pathology II",
+   "instructions": "Pathoma chapter 3 (neoplasia) + finish remaining First Aid general pathology; prioritize mechanisms.",
+   "bookSubject": "general_pathology",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-27",
+   "mode": "QUESTION",
+   "topic": "General pathology application",
+   "instructions": "3 \u00d7 20 questions timed pathology and mixed blocks with full wrong/uncertain review.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-28",
+   "mode": "QUESTION",
+   "topic": "Foundation mixed practice",
+   "instructions": "3 \u00d7 20 questions mixed biochem/immunology/pathology and one optional block.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-11-29",
+   "mode": "RECOVERY",
+   "topic": "Recovery and catch-up",
+   "instructions": "Optional 20 questions, Anki, 1 outstanding key concept; stop early.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": true
+  },
+  {
+   "date": "2026-11-30",
+   "mode": "BOOK",
+   "topic": "General Pharmacology",
+   "instructions": "Full First Aid general pharmacology: kinetics, dynamics, receptor mechanisms, autonomics and adverse effects.",
+   "bookSubject": "general_pharmacology",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-01",
+   "mode": "QUESTION",
+   "topic": "General pharmacology questions",
+   "instructions": "3 \u00d7 20 questions targeted pharmacology plus mixed, optional 20 questions.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-02",
+   "mode": "BOOK",
+   "topic": "Cardiovascular",
+   "instructions": "Full First Aid cardiovascular revision: hemodynamics, PV loops, valves/murmurs, HF, ischemia and congenital.",
+   "bookSubject": "cardiovascular",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-03",
+   "mode": "QUESTION",
+   "topic": "CVS application",
+   "instructions": "3 \u00d7 20 questions timed blocks: cardiovascular and mixed.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-04",
+   "mode": "QUESTION",
+   "topic": "Cardio/pharma mixed",
+   "instructions": "3 \u00d7 20 questions mainly mixed; include CVS and cross-system pharmacology, optional 20 questions.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-05",
+   "mode": "BOOK",
+   "topic": "Respiratory",
+   "instructions": "Full First Aid respiratory review: spirometry, V/Q, blood gases, infectious and noninfectious pathology.",
+   "bookSubject": "respiratory",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-06",
+   "mode": "RECOVERY",
+   "topic": "Rest and respiratory recall",
+   "instructions": "Protected lighter day; Anki and optionally 20 respiratory Q.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": true
+  },
+  {
+   "date": "2026-12-07",
+   "mode": "QUESTION",
+   "topic": "Respiratory application",
+   "instructions": "3 \u00d7 20 questions timed respiratory + mixed blocks; optional 20 questions if explanations fit.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-08",
+   "mode": "BOOK",
+   "topic": "Hematology / Oncology",
+   "instructions": "Full First Aid Heme/Onc: anemia, hemostasis, leukemias/lymphomas, oncologic mechanisms.",
+   "bookSubject": "hematology_oncology",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-09",
+   "mode": "QUESTION",
+   "topic": "Heme/Onc practice",
+   "instructions": "3 \u00d7 20 questions timed Heme/Onc plus mixed; optional 20 questions.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-10",
+   "mode": "BOOK",
+   "topic": "CNS I",
+   "instructions": "First Aid CNS: neuroanatomy, pathways, brainstem, cranial nerves, stroke and localization.",
+   "bookSubject": "cns",
+   "bookTargetPct": 50,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-11",
+   "mode": "BOOK",
+   "topic": "CNS II",
+   "instructions": "First Aid CNS remaining: neuropathology, CNS pharmacology, sensory/motor diseases and behavioral links.",
+   "bookSubject": "cns",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-12",
+   "mode": "QUESTION",
+   "topic": "CNS application",
+   "instructions": "3 \u00d7 20 questions timed neuro + mixed blocks; optional 20 questions.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-13",
+   "mode": "QUESTION",
+   "topic": "Mixed weak-topic practice",
+   "instructions": "3 \u00d7 20 questions mixed plus optional 20 questions; revisit top 2 NBME-baseline gaps.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-14",
+   "mode": "BOOK",
+   "topic": "Musculoskeletal",
+   "instructions": "Full First Aid MSK: rheumatology, bone/muscle disease, anatomy and peripheral nerves.",
+   "bookSubject": "musculoskeletal",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-15",
+   "mode": "QUESTION",
+   "topic": "MSK application",
+   "instructions": "3 \u00d7 20 questions targeted MSK + mixed; optional 20 questions.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-16",
+   "mode": "QUESTION",
+   "topic": "Integrated mixed questions",
+   "instructions": "3 \u00d7 20 questions mixed unseen spanning all systems, including neglected nonfocus topics.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-17",
+   "mode": "NBME",
+   "topic": "NBME 2: midpoint/readiness trend",
+   "instructions": "Unused official standard-paced CBSSA, one sitting, no resource consultation.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-18",
+   "mode": "NBME REVIEW",
+   "topic": "Review NBME 2",
+   "instructions": "Review official rationales and compare score/weakness changes to first assessment.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-19",
+   "mode": "QUESTION",
+   "topic": "Weakness sprint #1",
+   "instructions": "3 \u00d7 20 questions timed: 20 in worst NBME 2 weakness + 40 mixed, optional extra 20.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-20",
+   "mode": "QUESTION",
+   "topic": "Weakness sprint #2 (light)",
+   "instructions": "2 \u00d7 20 questions focused/mixed; optional extra 20 if recovered; keep day lighter.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 40,
+   "qStretch": 60,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-21",
+   "mode": "BOOK",
+   "topic": "Other First Aid systems: quick scan I",
+   "instructions": "Focused refresh, not a new full pass: renal, GI, endocrine and reproductive. Start with weakest areas.",
+   "bookSubject": "other_renal_gi_endo_repro",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-22",
+   "mode": "QUESTION",
+   "topic": "Broad mixed integration",
+   "instructions": "3 \u00d7 20 questions unseen mixed across all systems, optional 20.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 60,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-23",
+   "mode": "BOOK",
+   "topic": "Other First Aid systems: quick scan II",
+   "instructions": "Focused refresh: microbiology, ethics/communication, biostatistics, behavioral science and small missed material.",
+   "bookSubject": "other_micro_biostats_ethics",
+   "bookTargetPct": 100,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-24",
+   "mode": "QUESTION",
+   "topic": "Timed stamina practice",
+   "instructions": "4 \u00d7 20 questions timed blocks with planned breaks; review highest-value errors, stop by eight hours.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 80,
+   "qStretch": 80,
+   "locked": false,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-25",
+   "mode": "NBME",
+   "topic": "NBME 3: final decision support",
+   "instructions": "Unused official timed CBSSA if available; note exam is five days away.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-26",
+   "mode": "NBME REVIEW",
+   "topic": "Review NBME 3 and readiness decision",
+   "instructions": "Examine score report, trend, time pressure and stamina. Discuss postponement if range overlaps low-pass or trend is weak.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-27",
+   "mode": "FREE 120",
+   "topic": "Current official interactive Step 1 sample",
+   "instructions": "Complete current new-software practice sample under timed conditions; focus on familiarity and endurance.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-28",
+   "mode": "FREE 120 REVIEW",
+   "topic": "Review Free 120 + short final recall",
+   "instructions": "Review unfamiliar concepts and timing; no full chapters or bulk UWorld.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": false
+  },
+  {
+   "date": "2026-12-29",
+   "mode": "TAPER",
+   "topic": "Rest and exam logistics",
+   "instructions": "Confirm permit/ID, test center, transport, sleep, food and break strategy; avoid new material.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": true
+  },
+  {
+   "date": "2026-12-30",
+   "mode": "EXAM",
+   "topic": "PROVISIONAL Step 1 date",
+   "instructions": "Sit exam only if readiness is reassuring; exact appointment to be confirmed.",
+   "bookSubject": null,
+   "bookTargetPct": null,
+   "qCore": 0,
+   "qStretch": 0,
+   "locked": true,
+   "restProtected": false
+  }
+ ],
+ "subjects": [
+  {
+   "id": "biochemistry",
+   "name": "Biochemistry"
+  },
+  {
+   "id": "general_pathology",
+   "name": "General Pathology"
+  },
+  {
+   "id": "general_pharmacology",
+   "name": "General Pharmacology"
+  },
+  {
+   "id": "immunology",
+   "name": "Immunology"
+  },
+  {
+   "id": "cardiovascular",
+   "name": "Cardiovascular"
+  },
+  {
+   "id": "cns",
+   "name": "CNS"
+  },
+  {
+   "id": "respiratory",
+   "name": "Respiratory"
+  },
+  {
+   "id": "hematology_oncology",
+   "name": "Hematology/Oncology"
+  },
+  {
+   "id": "musculoskeletal",
+   "name": "Musculoskeletal"
+  },
+  {
+   "id": "other_renal_gi_endo_repro",
+   "name": "Renal, GI, Endocrine, Reproductive (quick review)"
+  },
+  {
+   "id": "other_micro_biostats_ethics",
+   "name": "Microbiology, Biostatistics, Ethics, Behavioral Science (quick review)"
+  }
+ ]
+}
