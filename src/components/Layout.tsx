@@ -2,6 +2,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useApp } from '../state/AppContext'
 import { Cat, ErrorBanner } from './ui'
+import BirthdaySplash from '../features/birthday/Birthday'
 
 const TABS = [
   { to: '/', label: 'Today' },
@@ -56,6 +57,7 @@ export default function Layout() {
   return (
     <div className="min-h-dvh md:flex">
       <ErrorBanner />
+      <BirthdaySplash />
       {!focusMode && <Rail />}
       <div className="flex min-w-0 flex-1 flex-col">
         {!focusMode && <BuddyBar />}

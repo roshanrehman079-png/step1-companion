@@ -10,6 +10,7 @@ import { addDays, daysBetween, fmtLong, fmtShort } from '../../lib/dates'
 import { goalFor, moodOn, onDate, questionTotals, waterOn, bookPercents, live } from '../../lib/progress'
 import type { Mood, StudyDay } from '../../lib/types'
 import FocusTimer from './FocusTimer'
+import { BirthdayBanner } from '../birthday/Birthday'
 import LogSheet, { type LogKind } from './LogSheet'
 import WrapUp from './WrapUp'
 import plan from '../../data/plan.json'
@@ -47,6 +48,7 @@ export default function Today() {
     <header className="flex flex-col gap-1">
       <p className="hint m-0">{fmtLong(today)}, day {daysBetween(plan.startDate, today) + 1} of {plan.days.length}</p>
       <h1 className="h1">{greeting()}, {profile.display_name || 'Azka'}</h1>
+      <BirthdayBanner />
     </header>
   )
 

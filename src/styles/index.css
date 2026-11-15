@@ -64,6 +64,8 @@
 @keyframes bubble-in { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
 .mochi-react { animation: mochi-pop .6s ease-out 1; transform-origin: 50% 90%; }
 .bubble-in { animation: bubble-in .25s ease-out 1; }
+@keyframes confetti-fall { from { transform: translateY(-20px) rotate(0) } to { transform: translateY(110vh) rotate(540deg) } }
+.confetti { animation: confetti-fall 4s linear infinite; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
