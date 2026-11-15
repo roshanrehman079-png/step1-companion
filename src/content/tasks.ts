@@ -1,66 +1,67 @@
-// The ordered to-do list for each type of day. Edit the wording or minutes here.
-// "kind" decides what happens when a step is finished:
-//   review   -> asks how many flagged explanations were reviewed
-//   block    -> asks how many new questions, how many wrong or unsure
-//   read     -> asks where you are in the chapter (percent)
-//   notes    -> opens a quick mistake note
-//   score    -> asks for the practice exam score
-//   plain    -> just ticks it off
-import type { Mode } from '../lib/types'
+// The starting to-do list for each type of day, with durations in minutes.
+// Azka can change any day in the Planner; these are only the defaults.
+// kind decides what happens when a task is ticked:
+//   block -> asks how many questions / wrong     read  -> asks chapter percent
+//   review -> asks explanations reviewed          notes -> opens a mistake note
+//   score -> asks practice exam score             plain -> just ticks
+//   break -> shown in the timeline, never needs ticking
+import type { Mode, PlanTask, TaskKind } from '../lib/types'
 
-export type TaskKind = 'review' | 'block' | 'read' | 'notes' | 'score' | 'plain'
-export interface TaskTemplate { title: string; detail: string; minutes: number; kind: TaskKind; optional?: boolean }
+type T = Omit<PlanTask, 'id'>
+const t = (title: string, minutes: number, kind: TaskKind = 'plain', extra: Partial<T> = {}): T => ({ title, minutes, kind, ...extra })
+const brk = (minutes = 15, title = 'Break') => t(title, minutes, 'break')
 
-export function tasksFor(mode: Mode, opts: { pendingReviews?: number; blocks?: number; topic?: string } = {}): TaskTemplate[] {
-  const blocks = Math.max(0, opts.blocks ?? 3)
+/** Ready-made tasks for the "Add" buttons in the day editor. */
+export const QUICK_ADD: { label: string; task: T }[] = [
+  { label: '20 questions', task: t('20 UWorld questions, timed', 35, 'block', { detail: 'Then review what you missed' }) },
+  { label: 'Anki flashcards', task: t('Anki flashcards', 30, 'plain', { detail: 'Due cards for this topic' }) },
+  { label: 'Mehlman PDF', task: t('Mehlman PDF for this topic', 45, 'plain', { detail: 'High-yield arrows and buzzwords' }) },
+  { label: 'Pathoma', task: t('Pathoma chapter', 60, 'plain') },
+  { label: 'Mistake notes', task: t('Write mistake notes', 30, 'notes') },
+  { label: 'Break', task: brk(15) },
+  { label: 'Custom task', task: t('New task', 30, 'plain') },
+]
+
+function template(mode: Mode, qCore: number): T[] {
+  const blocks = Math.max(1, Math.round(qCore / 20))
   switch (mode) {
     case 'QUESTION': {
-      const list: TaskTemplate[] = []
-      if ((opts.pendingReviews ?? 0) > 0)
-        list.push({ title: `Review ${opts.pendingReviews} flagged explanations`, detail: 'From earlier blocks. Do these first.', minutes: Math.min(60, opts.pendingReviews! * 3), kind: 'review' })
-      for (let i = 1; i <= blocks; i++)
-        list.push({ title: `Block ${i}: 20 questions, timed`, detail: i === 1 ? '30 min, then review what you missed' : 'Take a 15-min break first', minutes: 30, kind: 'block' })
-      if (blocks === 0) list.push({ title: 'One block of 10 questions', detail: 'Only if it feels okay. Stopping is fine.', minutes: 15, kind: 'block', optional: true })
-      list.push({ title: 'Review your misses and write mistake notes', detail: '10 seconds per note', minutes: 60, kind: 'notes' })
+      const list: T[] = [t('Anki flashcards', 30, 'plain', { detail: 'Due cards first' }),
+        t('Review flagged explanations', 30, 'review', { detail: 'From earlier blocks' })]
+      for (let i = 1; i <= blocks; i++) {
+        list.push(t(`Block ${i}: 20 questions, timed, then review`, 60, 'block'))
+        list.push(i === 2 ? brk(45, 'Lunch') : brk(15))
+      }
+      list.push(t('Write mistake notes', 30, 'notes', { detail: '10 seconds per note' }),
+        t('Mehlman PDF for weak areas', 30, 'plain', { optional: true }))
       return list
     }
     case 'BOOK':
-      return [
-        { title: 'First Aid: first section', detail: '90 min, then a 15-min break', minutes: 90, kind: 'plain' },
-        { title: 'First Aid: second section', detail: '90 min, then lunch', minutes: 90, kind: 'plain' },
-        { title: 'First Aid: third section', detail: '90 min', minutes: 90, kind: 'plain' },
-        { title: 'Close the book and recall', detail: 'Write or say what you remember. 60 min.', minutes: 60, kind: 'plain' },
-        { title: 'Log where you got to', detail: 'Percent of the chapter, not pages added', minutes: 2, kind: 'read' },
-        { title: 'Pathoma, Mehlman or Anki if useful', detail: 'Optional, about 15 min', minutes: 15, kind: 'plain', optional: true },
-      ]
+      return [t('First Aid: first section', 90), brk(15), t('First Aid: second section', 90), brk(45, 'Lunch'),
+        t('First Aid: third section', 90), brk(15), t('Mehlman PDF for this topic', 45, 'plain', { detail: 'High-yield summary' }),
+        t('Close the book and recall', 45, 'plain', { detail: 'Write or say what you remember' }),
+        t('Anki flashcards', 30, 'plain', { detail: 'Cards for this topic' }), t('Log where you got to', 5, 'read', { detail: 'Percent of the chapter' })]
     case 'NBME':
     case 'FREE 120':
-      return [
-        { title: 'Set up: quiet room, water, snacks', detail: 'Phone away', minutes: 10, kind: 'plain' },
-        { title: mode === 'NBME' ? 'Take the practice exam, timed' : 'Take the Free 120, timed', detail: 'One sitting. No checking answers.', minutes: 300, kind: 'plain' },
-        { title: 'Log your score', detail: 'From the official report. Private by default.', minutes: 5, kind: 'score' },
-        { title: 'Rest', detail: 'Reviewing is tomorrow', minutes: 0, kind: 'plain' },
-      ]
+      return [t('Set up: quiet room, water, snacks', 15), t(mode === 'NBME' ? 'Practice exam, timed, one sitting' : 'Free 120, timed', 300),
+        t('Log your score', 5, 'score', { detail: 'Private by default' }), t('Rest', 60, 'plain', { detail: 'Reviewing is tomorrow' })]
     case 'NBME REVIEW':
     case 'FREE 120 REVIEW':
-      return [
-        { title: 'Go through the explanations', detail: 'Wrong and guessed ones first', minutes: 180, kind: 'plain' },
-        { title: 'Write mistake notes', detail: 'One line per lesson, in your own words', minutes: 60, kind: 'notes' },
-        { title: 'Pick your 3 weakest areas', detail: 'They shape the next practice days', minutes: 15, kind: 'plain' },
-      ]
+      return [t('Go through wrong and guessed explanations', 180), brk(45, 'Lunch'), t('Write mistake notes', 60, 'notes'),
+        t('Pick your 3 weakest areas', 15), t('Anki flashcards', 30)]
     case 'RECOVERY':
-      return [
-        { title: 'Rest', detail: 'Sleep, a walk, something nice', minutes: 0, kind: 'plain' },
-        { title: 'Review due mistake notes', detail: 'Optional, a few minutes', minutes: 10, kind: 'notes', optional: true },
-        { title: '20 questions, only if you feel fresh', detail: 'Optional', minutes: 30, kind: 'block', optional: true },
-      ]
+      return [t('Rest, sleep, a walk', 120), t('Anki flashcards', 30, 'plain', { optional: true }),
+        t('Review due mistake notes', 20, 'notes', { optional: true }), t('20 questions if you feel fresh', 35, 'block', { optional: true })]
     case 'TAPER':
-      return [
-        { title: 'Confirm permit, ID and test centre', detail: 'And how you will get there', minutes: 20, kind: 'plain' },
-        { title: 'Plan sleep, food and breaks', detail: 'No new material today', minutes: 15, kind: 'plain' },
-        { title: 'Rest', detail: 'You have done the work', minutes: 0, kind: 'plain' },
-      ]
+      return [t('Confirm permit, ID and test centre', 20), t('Plan sleep, food and breaks', 15), t('Light Anki only', 30, 'plain', { optional: true }), t('Rest', 120)]
     case 'EXAM':
-      return [{ title: 'Exam day', detail: 'Breathe. Eat. You know more than you think.', minutes: 0, kind: 'plain' }]
+      return [t('Exam day. Breathe, eat, you know more than you think.', 480)]
   }
 }
+
+/** Template tasks get stable ids (t1, t2, ...) so ticks survive until the day is edited. */
+export function templateTasks(mode: Mode, qCore = 60): PlanTask[] {
+  return template(mode, qCore).map((x, i) => ({ id: `t${i + 1}`, ...x }))
+}
+
+export const newTaskId = () => `u${Math.random().toString(36).slice(2, 9)}`

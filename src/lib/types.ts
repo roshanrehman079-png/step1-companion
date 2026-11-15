@@ -19,6 +19,7 @@ export interface Profile {
   chat_level: ChatLevel
   ai_enabled: boolean
   onboarded_at: string | null
+  day_start: string
 }
 
 export interface StudyDay {
@@ -34,6 +35,22 @@ export interface StudyDay {
   locked: boolean
   rest_protected: boolean
   extra: { carry?: { subject: string; pct: number; from: string }[] }
+  tasks: PlanTask[] | null     // null = use the template for this type of day
+  start_time: string | null    // 'HH:MM', overrides the profile's day_start
+}
+
+export type TaskKind = 'review' | 'block' | 'read' | 'notes' | 'score' | 'plain' | 'break'
+export interface PlanTask {
+  id: string
+  title: string
+  detail?: string
+  minutes: number
+  kind: TaskKind
+  optional?: boolean
+  at?: string          // fixed start 'HH:MM'; later tasks follow on from it
+  from?: string        // moved here from this date (backlog)
+  moved_to?: string    // moved away to this date
+  dismissed?: boolean  // "let it go" from the pending list
 }
 
 export type EventKind = 'checkin' | 'rest' | 'step' | 'book' | 'qblock' | 'qreview' | 'water' |
@@ -64,7 +81,9 @@ export interface Note {
 
 export interface Grant {
   id: string
-  invite_email: string
+  label: string
+  invite_code: string
+  invite_email: string | null
   supporter_id: string | null
   status: 'pending' | 'active' | 'revoked'
   permissions: SharePermissions

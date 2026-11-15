@@ -10,7 +10,7 @@ Setup steps are in **[SETUP.md](SETUP.md)**.
 |---|---|
 | Colours and fonts | `src/styles/index.css` (the `@theme` block at the top) |
 | What the cat says | `src/content/mochi.ts` |
-| Each day type's to-do list | `src/content/tasks.ts` |
+| Default to-do list and durations for each type of day, and the editor's quick-add buttons | `src/content/tasks.ts` |
 | Labels, moods, cheers, the three rules | `src/content/strings.ts` |
 | The 45-day plan (new accounts) | `src/data/plan.json` |
 | Points and growth stages | `src/lib/growth.ts` (`POINTS`, `STAGES`) |
@@ -45,6 +45,8 @@ supabase/
 - Run `npm run check` before pushing. GitHub runs it too, and won't publish if it fails.
 
 ## Rules the app keeps
+
+- Azka controls the plan: she can edit, add, remove or swap days, change times and tasks, and move or let go of pending items. Every change is logged and can be undone, and guests can see the list of changes.
 
 - Reading days and practice days never mix. Mood changes how big the day is, never what kind of day it is.
 - Missed work never piles onto tomorrow. Catch-up goes only where there's real room, and only if Azka agrees.

@@ -5,7 +5,8 @@ import { catSvgInner } from '../../components/catArt'
 type Mode = 'in' | 'up' | 'reset'
 
 export default function SignIn() {
-  const [mode, setMode] = useState<Mode>('in')
+  const invited = !!localStorage.getItem('join-code')
+  const [mode, setMode] = useState<Mode>(invited ? 'up' : 'in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -19,7 +20,7 @@ export default function SignIn() {
       : await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirect })
     setBusy(false)
     if (r.error) return setMsg({ ok: false, text: r.error.message })
-    if (mode === 'up') setMsg({ ok: true, text: 'Check your email and tap the link to confirm, then sign in here.' })
+    if (mode === 'up' && !('session' in r.data && r.data.session)) setMsg({ ok: true, text: 'Check your email and tap the link to confirm, then sign in here.' })
     if (mode === 'reset') setMsg({ ok: true, text: 'Check your email for a link to set a new password.' })
   }
 
@@ -28,7 +29,7 @@ export default function SignIn() {
       <div className="flex flex-col gap-3">
         <svg role="img" aria-label="A cream kitten" width="112" height="112" viewBox="0 0 120 120" dangerouslySetInnerHTML={{ __html: catSvgInner('content', 'kitten') }} />
         <h1 className="h1 text-[30px]">{mode === 'up' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Welcome back'}</h1>
-        <p className="m-0 text-muted">Your study space, saved safely across your phone and laptop.</p>
+        <p className="m-0 text-muted">{invited ? "You've been invited to follow along. Create an account (or sign in) to see the progress." : 'Your study space, saved safely across your phone and laptop.'}</p>
       </div>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div><label htmlFor="em" className="label">Email</label>

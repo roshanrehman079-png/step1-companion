@@ -1,17 +1,41 @@
 // "Ask Dr. Mochi": a short study chat answered by Gemini through our server function.
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { FunctionRegion } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../state/AppContext'
 import { Cat, Sheet } from '../../components/ui'
 import NoteForm from '../notes/NoteForm'
 
-type Msg = { role: 'user' | 'model'; text: string; sources?: { uri: string; title: string }[] }
+type Msg = { role: 'user' | 'model'; text: string; sources?: { uri: string; title: string }[]; error?: string }
 const ERRORS: Record<string, string> = {
   limit: "That's all my questions for today. Let's rest our brains and try again tomorrow.",
   'not-configured': "My answer service isn't set up yet. Roshan needs to add the Gemini key in Supabase.",
   off: 'Asking is switched off in Settings.',
   'sign-in': 'Please sign in again.',
+  'not-allowed': 'Only the study account can ask questions.',
+  ai: "The AI service said no to that one. Details below; try again in a minute.",
+}
+
+/** Calls the server function. Always returns a readable message plus technical detail for debugging. */
+export async function askMochi(messages: { role: string; text: string }[], localDate: string) {
+  try {
+    // US region: Gemini's free tier isn't offered everywhere, and the nearest region may be one of those places.
+    const { data, error } = await supabase.functions.invoke('ask-mochi', { body: { messages, localDate }, region: FunctionRegion.UsEast1 })
+    if (!error && data?.text) return { ok: true as const, data }
+    let body: { error?: string; detail?: string; status?: number; message?: string; msg?: string } = data ?? {}
+    let status: number | string = ''
+    if (error && 'context' in error && error.context instanceof Response) {
+      status = error.context.status
+      try { body = await error.context.clone().json() } catch { try { body = { detail: await error.context.text() } } catch { /* empty */ } }
+    }
+    const code = body.error ?? ''
+    const detail = [status && `HTTP ${status}`, code, body.status && `AI ${body.status}`, body.detail || body.message || body.msg || error?.message].filter(Boolean).join(' · ')
+    const message = ERRORS[code] ?? (status === 404 ? "I can't find my answer service. Is the ask-mochi function deployed?" : status === 401 ? 'The server rejected the login. In Supabase, turn off "Verify JWT" for ask-mochi.' : "Hmm, I couldn't answer just now. Try again in a minute?")
+    return { ok: false as const, message, detail }
+  } catch (e) {
+    return { ok: false as const, message: "I couldn't reach my answer service. Check your connection?", detail: String(e) }
+  }
 }
 
 export default function Ask() {
@@ -29,11 +53,10 @@ export default function Ask() {
     const q = text.trim(); if (!q || busy) return
     const next: Msg[] = [...msgs, { role: 'user', text: q }]
     setMsgs(next); setText(''); setBusy(true)
-    const { data, error } = await supabase.functions.invoke('ask-mochi', { body: { messages: next.map(({ role, text }) => ({ role, text })), localDate: today } })
+    const r = await askMochi(next.map(({ role, text }) => ({ role, text })), today)
     setBusy(false)
-    let code: string | undefined = data?.error
-    if (error && 'context' in error) { try { code = (await (error.context as Response).json()).error } catch { /* ignore */ } }
-    if (error || !data?.text) return setMsgs([...next, { role: 'model', text: ERRORS[code ?? ''] ?? "Hmm, I couldn't answer just now. Try again in a minute?" }])
+    if (!r.ok) return setMsgs([...next, { role: 'model', text: r.message, error: r.detail }])
+    const data = r.data
     setLeft(data.left ?? null)
     setMsgs([...next, { role: 'model', text: data.text, sources: data.sources }])
   }
@@ -58,11 +81,12 @@ export default function Ask() {
               <Cat size={36} mood="happy" />
               <div className="card flex flex-col gap-2 rounded-tl-sm">
                 <p className="m-0 whitespace-pre-wrap">{m.text}</p>
+                {m.error && <p className="m-0 break-all rounded-lg bg-paper px-2.5 py-1.5 font-mono text-xs text-muted">Details: {m.error}</p>}
                 {m.sources && m.sources.length > 0 && <div><p className="hint m-0">Sources</p><ul className="m-0 pl-5 text-[15px]">{m.sources.map(s => <li key={s.uri}><a href={s.uri} target="_blank" rel="noreferrer">{s.title || 'Source'}</a></li>)}</ul></div>}
-                <div className="flex flex-wrap gap-2">
+                {!m.error && <div className="flex flex-wrap gap-2">
                   <button type="button" className="btn-secondary min-h-11 px-3.5 text-sm" onClick={() => setSaving(m.text.slice(0, 280))}>Save as mistake note</button>
                   <a className="btn-secondary min-h-11 px-3.5 text-sm" href={`https://www.google.com/search?q=${encodeURIComponent(msgs[i - 1]?.text ?? lastQ)}`} target="_blank" rel="noreferrer">Search Google</a>
-                </div>
+                </div>}
               </div>
             </div>)}
         {busy && <p className="hint m-0 flex items-center gap-2"><Cat size={28} mood="focus" /> {catName} is thinking…</p>}

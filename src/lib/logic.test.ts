@@ -76,7 +76,7 @@ describe('event-derived progress', () => {
 })
 
 const qday: StudyDay = { id: 'd', day: '2026-11-20', mode: 'QUESTION', topic: 'x', instructions: '', book_subject: null,
-  book_target_pct: null, q_core: 60, q_stretch: 80, locked: false, rest_protected: false, extra: {} }
+  book_target_pct: null, q_core: 60, q_stretch: 80, locked: false, rest_protected: false, extra: {}, tasks: null, start_time: null }
 const bday: StudyDay = { ...qday, mode: 'BOOK', book_subject: 'bio', book_target_pct: 100, q_core: 0, q_stretch: 0 }
 
 describe('goals by mood', () => {

@@ -6,9 +6,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase, newId } from '../lib/supabase'
-import type { AppEvent, EventKind, Grant, Note, Profile, SharePermissions, StudyDay } from '../lib/types'
+import type { AppEvent, EventKind, Grant, Note, PlanTask, Profile, SharePermissions, StudyDay } from '../lib/types'
+import { tasksOf, ticked, timeline, pending as pendingList, dayProgress } from '../lib/schedule'
+import { newTaskId } from '../content/tasks'
 import { DEFAULT_PERMISSIONS } from '../lib/types'
-import { addDays, localDate, weekOf } from '../lib/dates'
+import { addDays, fmtShort, localDate, weekOf } from '../lib/dates'
 import { bookPercents, goalMet, moodOn, onDate } from '../lib/progress'
 import { pointsByDay, stageFor, drName } from '../lib/growth'
 import { line, type MochiMoment } from '../content/mochi'
@@ -45,11 +47,20 @@ interface Ctx {
   addNote: (n: Pick<Note, 'body'> & Partial<Note>) => Promise<boolean>
   reviewNote: (n: Note, remembered: boolean) => Promise<void>
   archiveNote: (id: string) => Promise<void>
-  invite: (email: string) => Promise<boolean>
+  invite: (label: string) => Promise<Grant | null>
   setGrant: (id: string, patch: Partial<Pick<Grant, 'status' | 'permissions'>>) => Promise<void>
   removeGrant: (id: string) => Promise<void>
   markCheersSeen: () => Promise<void>
-  addCarry: (target: StudyDay, carry: { subject: string; pct: number; from: string }) => Promise<boolean>
+  saveDay: (d: StudyDay, patch: Partial<StudyDay>, reason: string) => Promise<boolean>
+  insertDayAfter: (d: StudyDay) => Promise<boolean>
+  removeDay: (d: StudyDay) => Promise<boolean>
+  swapDays: (a: StudyDay, b: StudyDay) => Promise<boolean>
+  tickTask: (d: StudyDay, taskId: string) => Promise<boolean>
+  untickTask: (d: StudyDay, taskId: string) => Promise<void>
+  moveTask: (from: StudyDay, task: PlanTask, toDate: string) => Promise<boolean>
+  dismissTask: (d: StudyDay, task: PlanTask, value: boolean) => Promise<boolean>
+  dismissMany: (d: StudyDay, ids: string[]) => Promise<boolean>
+  claimCode: (code: string) => Promise<boolean>
   restoreVersion: (id: string) => Promise<boolean>
   versions: { id: string; created_at: string; reason: string }[]
   refresh: () => Promise<void>
@@ -101,16 +112,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (!uid) return
     try {
-      await supabase.rpc('claim_invites')
+      const code = localStorage.getItem('join-code')
+      if (code) { await supabase.rpc('claim_invite_code', { p_code: code }); localStorage.removeItem('join-code') }
       const [p, d, e, n, g, c, o, v] = await Promise.all([
         supabase.from('profiles').select('*').eq('user_id', uid).maybeSingle(),
         supabase.from('study_days').select('*').order('day'),
         supabase.from('events').select('*').order('created_at'),
         supabase.from('notes').select('*').eq('archived', false).order('due_date'),
         supabase.from('grants').select('*').eq('owner_id', uid).order('created_at'),
-        supabase.from('cheers').select('*').order('created_at', { ascending: false }).limit(20),
+        supabase.from('cheers').select('*').order('created_at', { ascending: false }).limit(50),
         supabase.rpc('my_owners'),
-        supabase.from('plan_versions').select('id, created_at, reason').order('created_at', { ascending: false }).limit(20),
+        supabase.from('plan_versions').select('id, created_at, reason').order('created_at', { ascending: false }).limit(50),
       ])
       const firstErr = [p, d, e, n, g, c, o, v].find(r => r.error)?.error
       if (firstErr) throw firstErr
@@ -195,10 +207,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (err) return fail('Could not archive', err)
     setNotes(prev => prev.filter(x => x.id !== id))
   }
-  const invite: Ctx['invite'] = async (email) => {
-    const { data, error: err } = await supabase.from('grants').insert({ invite_email: email.trim().toLowerCase(), permissions: DEFAULT_PERMISSIONS }).select().single()
-    if (err) { fail(err.code === '23505' ? 'That email is already invited' : 'Could not send the invite', err); return false }
-    setGrants(prev => [...prev, data as Grant]); return true
+  const invite: Ctx['invite'] = async (label) => {
+    const { data, error: err } = await supabase.from('grants').insert({ label: label.trim(), permissions: DEFAULT_PERMISSIONS }).select().single()
+    if (err) { fail('Could not create the invite', err); return null }
+    setGrants(prev => [...prev, data as Grant]); return data as Grant
+  }
+  const claimCode: Ctx['claimCode'] = async (code) => {
+    const { data, error: err } = await supabase.rpc('claim_invite_code', { p_code: code })
+    if (err) { fail('Could not use that invite', err); return false }
+    await refresh(); return (data as number) > 0
   }
   const setGrant: Ctx['setGrant'] = async (id, patch) => {
     const full = { ...patch, ...(patch.status === 'revoked' ? { revoked_at: new Date().toISOString() } : {}) }
@@ -221,25 +238,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { error: err } = await supabase.from('plan_versions').insert({ reason, snapshot: days })
     if (err) throw err
   }
-  const addCarry: Ctx['addCarry'] = async (target, carry) => {
-    try {
-      await snapshot(`Before adding ${carry.pct}% ${carry.subject} to ${target.day}`)
-      const extra = { ...target.extra, carry: [...(target.extra.carry ?? []), carry] }
-      const { error: err } = await supabase.from('study_days').update({ extra }).eq('id', target.id)
-      if (err) throw err
-      await refresh(); return true
-    } catch (e) { fail('Could not change the plan', e); return false }
+  /** Every plan change saves the previous plan first, so it can be undone from Planner > Changes. */
+  const edit = async (reason: string, work: () => Promise<void>) => {
+    try { await snapshot(reason); await work(); await refresh(); return true }
+    catch (e) { fail('Could not change the plan', e); await refresh(); return false }
   }
+  const must = <T,>(r: { error: unknown; data?: T }) => { if (r.error) throw r.error; return r.data as T }
+  const saveDay: Ctx['saveDay'] = (d, patch, reason) => edit(reason, async () => {
+    must(await supabase.from('study_days').update(patch).eq('id', d.id))
+  })
+  const insertDayAfter: Ctx['insertDayAfter'] = (d) => edit(`Added a day of ${d.topic} after ${fmtShort(d.day)}`, async () => {
+    const next = addDays(d.day, 1)
+    must(await supabase.rpc('shift_days', { p_from: next, p_delta: 1 }))
+    must(await supabase.from('study_days').insert({ day: next, mode: d.mode, topic: d.topic, instructions: d.instructions,
+      book_subject: d.book_subject, book_target_pct: d.book_target_pct, q_core: d.q_core, q_stretch: d.q_stretch,
+      tasks: tasksOf(d).filter(t => !t.moved_to).map(t => ({ ...t, id: newTaskId(), from: undefined, dismissed: undefined })), start_time: d.start_time }))
+  })
+  const removeDay: Ctx['removeDay'] = (d) => edit(`Removed ${fmtShort(d.day)} (${d.topic}); later days moved one day earlier`, async () => {
+    must(await supabase.from('study_days').delete().eq('id', d.id))
+    must(await supabase.rpc('shift_days', { p_from: addDays(d.day, 1), p_delta: -1 }))
+  })
+  const swapDays: Ctx['swapDays'] = (a, b) => edit(`Swapped ${fmtShort(a.day)} (${a.topic}) with ${fmtShort(b.day)} (${b.topic})`, async () => {
+    const body = (x: StudyDay) => ({ mode: x.mode, topic: x.topic, instructions: x.instructions, book_subject: x.book_subject, book_target_pct: x.book_target_pct,
+      q_core: x.q_core, q_stretch: x.q_stretch, locked: x.locked, rest_protected: x.rest_protected, extra: x.extra, tasks: tasksOf(x), start_time: x.start_time })
+    must(await supabase.from('study_days').update(body(b)).eq('id', a.id))
+    must(await supabase.from('study_days').update(body(a)).eq('id', b.id))
+  })
+  const tickTask: Ctx['tickTask'] = async (d, taskId) => !!(await logEvent('step', { day: d.day, task: taskId }, d.day))
+  const untickTask: Ctx['untickTask'] = async (d, taskId) => {
+    for (const e of events) if (!e.voided && e.kind === 'step' && e.payload.day === d.day && e.payload.task === taskId) await voidEvent(e.id)
+  }
+  const moveTask: Ctx['moveTask'] = async (from, task, toDate) => {
+    const to = days.find(x => x.day === toDate)
+    if (!to) { fail('That date is not in the plan'); return false }
+    return edit(`Moved "${task.title}" from ${fmtShort(from.day)} to ${fmtShort(toDate)}`, async () => {
+      must(await supabase.from('study_days').update({ tasks: tasksOf(from).map(t => (t.id === task.id ? { ...t, moved_to: toDate } : t)) }).eq('id', from.id))
+      must(await supabase.from('study_days').update({ tasks: [...tasksOf(to), { ...task, id: newTaskId(), from: from.day, at: undefined, moved_to: undefined }] }).eq('id', to.id))
+    })
+  }
+  const dismissTask: Ctx['dismissTask'] = (d, task, value) => edit(`${value ? 'Let go of' : 'Brought back'} "${task.title}" (${fmtShort(d.day)})`, async () => {
+    must(await supabase.from('study_days').update({ tasks: tasksOf(d).map(t => (t.id === task.id ? { ...t, dismissed: value } : t)) }).eq('id', d.id))
+  })
+  const dismissMany: Ctx['dismissMany'] = (d, ids) => edit(`Let go of ${ids.length} pending task${ids.length > 1 ? 's' : ''} from ${fmtShort(d.day)}`, async () => {
+    must(await supabase.from('study_days').update({ tasks: tasksOf(d).map(t => (ids.includes(t.id) ? { ...t, dismissed: true } : t)) }).eq('id', d.id))
+  })
   const restoreVersion: Ctx['restoreVersion'] = async (id) => {
-    try {
-      const { data, error: err } = await supabase.from('plan_versions').select('snapshot').eq('id', id).single()
-      if (err) throw err
-      await snapshot('Before undo')
-      const rows = (data.snapshot as StudyDay[]).map(({ id: _id, ...r }) => r)
-      const up = await supabase.from('study_days').upsert(rows, { onConflict: 'owner_id,day' })
-      if (up.error) throw up.error
-      await refresh(); return true
-    } catch (e) { fail('Could not restore that version', e); return false }
+    const v = versions.find(x => x.id === id)
+    return edit(`Undo: went back to before "${v?.reason ?? 'a change'}"`, async () => { must(await supabase.rpc('restore_plan', { p_version: id })) })
   }
 
   // ---- shareable summary: only whitelisted fields, refreshed when progress changes.
@@ -247,29 +292,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!uid || profile?.role !== 'learner' || !days.length) return
     const t = window.setTimeout(async () => {
       const week = weekOf(today)
-      const planWeek = days.filter(d => week.includes(d.day)).map(d => ({ day: d.day, mode: d.mode, topic: d.topic,
-        done: d.day < today ? onDate(events, d.day).some(e => ['wrap', 'step', 'qblock', 'book', 'rest'].includes(e.kind)) : null }))
-      const studied = planWeek.filter(d => d.done && d.day <= today).length
+      const joined = profile.onboarded_at?.slice(0, 10) ?? today
+      const planAll = days.map(d => {
+        const done = ticked(events, d.day); const prog = dayProgress(d, events)
+        return { day: d.day, mode: d.mode, topic: d.topic, done: prog.total > 0 && prog.done === prog.total, progress: prog,
+          tasks: timeline(tasksOf(d), d.start_time ?? profile.day_start ?? '08:00').map(t => ({ title: t.title, start: t.start, minutes: t.minutes,
+            kind: t.kind, optional: !!t.optional, done: done.has(t.id), dismissed: !!t.dismissed, from: t.from ?? null })) }
+      })
+      const planWeek = planAll.filter(d => week.includes(d.day))
+      const studied = planWeek.filter(d => d.day <= today && d.progress.done > 0).length
       const planned = planWeek.filter(d => d.day <= today).length
       const pct = bookPercents(events)
       const subjects = (plan.subjects as { id: string; name: string }[]).map(s => ({ name: s.name, pct: pct[s.id] ?? 0 }))
       const exam = profile.exam_date
       const data = {
-        name: profile.display_name || 'Azka', cat_name: catName, updated_at: new Date().toISOString(),
-        plan: planWeek, days: { studied, planned }, topics: subjects,
+        name: profile.display_name || 'Azka', cat_name: catName, updated_at: new Date().toISOString(), today,
+        plan: planAll, days: { studied, planned }, topics: subjects,
+        pending: pendingList(days, events, today, joined).map(p => ({ day: p.day.day, title: p.task.title })),
+        changes: versions.filter(v => v.reason !== 'Starting plan').map(v => ({ at: v.created_at, reason: v.reason })),
         mochi: { stage: growth.stage.key, title: growth.stage.title },
         countdown: exam ? { exam, confirmed: profile.exam_confirmed, daysLeft: Math.max(0, Math.round((new Date(exam).getTime() - new Date(today).getTime()) / 86400000)) } : null,
       }
       await supabase.from('public_summary').upsert({ owner_id: uid, data, updated_at: new Date().toISOString() })
     }, 1500)
     return () => window.clearTimeout(t)
-  }, [uid, profile, days, events, today, catName, growth.stage.key, growth.stage.title])
+  }, [uid, profile, days, events, versions, today, catName, growth.stage.key, growth.stage.title])
 
   const signOut = async () => { await supabase.auth.signOut(); setProfile(null); setEvents([]); setDays([]); setNotes([]) }
 
   const value: Ctx = { session, ready, error, setError, profile, days, events, notes, grants, cheers, owners, today,
     focusMode, setFocusMode, bubble, say, catName, growth, logEvent, voidEvent, saveProfile, completeOnboarding,
-    addNote, reviewNote, archiveNote, invite, setGrant, removeGrant, markCheersSeen, addCarry, restoreVersion,
+    addNote, reviewNote, archiveNote, invite, setGrant, removeGrant, markCheersSeen, saveDay, insertDayAfter, removeDay, swapDays,
+    tickTask, untickTask, moveTask, dismissTask, dismissMany, claimCode, restoreVersion,
     versions, refresh, signOut }
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>
 }

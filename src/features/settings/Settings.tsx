@@ -13,7 +13,8 @@ const SHARE_LABELS: [keyof SharePermissions, string][] = [
 
 export default function Settings() {
   const { profile, saveProfile, grants, invite, setGrant, removeGrant, signOut, session, days, events, notes, versions, catName } = useApp()
-  const [email, setEmail] = useState('')
+  const [label, setLabel] = useState('')
+  const [fresh, setFresh] = useState<Grant | null>(null)
   const [examOpen, setExamOpen] = useState(false)
   const [newExam, setNewExam] = useState(profile?.exam_date ?? '')
   const [confirmDel, setConfirmDel] = useState('')
@@ -23,7 +24,7 @@ export default function Settings() {
   const flash = (t: string) => { setSaved(t); setTimeout(() => setSaved(''), 2500) }
   const save = async (patch: Parameters<typeof saveProfile>[0]) => { if (await saveProfile(patch)) flash('Saved') }
 
-  const doInvite = async (e: FormEvent) => { e.preventDefault(); if (await invite(email)) { setEmail(''); flash('Invite saved. Ask them to create an account with that email.') } }
+  const doInvite = async (e: FormEvent) => { e.preventDefault(); const g = await invite(label); if (g) { setLabel(''); setFresh(g) } }
   const exportData = () => {
     const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), schema: 1, profile, days, events, notes, versions }, null, 2)], { type: 'application/json' })
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `study-space-${new Date().toISOString().slice(0, 10)}.json`; a.click()
@@ -44,6 +45,9 @@ export default function Settings() {
           <button type="button" className="btn-secondary mt-2" onClick={() => setExamOpen(true)}>Change exam date</button></div>
         <div><span id="hrs" className="label">Study hours on a normal day</span>
           <div role="group" aria-labelledby="hrs" className="flex flex-wrap gap-2">{[4, 6, 8, 10].map(h => <button key={h} type="button" className="chip" aria-pressed={profile.daily_hours === h} onClick={() => save({ daily_hours: h })}>{h} hours</button>)}</div></div>
+        <div><label htmlFor="ds" className="label">Usual start time</label>
+          <input id="ds" type="time" className="input w-40" defaultValue={profile.day_start} onBlur={e => e.target.value && e.target.value !== profile.day_start && save({ day_start: e.target.value })} />
+          <p className="hint mt-1.5">The daily schedule's times count from here. You can change any single day in the Planner.</p></div>
         <div><span id="wg" className="label">Daily water goal</span>
           <div role="group" aria-labelledby="wg" className="flex flex-wrap gap-2">
             {[2000, 2500, 3000].map(w => <button key={w} type="button" className="chip" aria-pressed={profile.water_goal_ml === w} onClick={() => save({ water_goal_ml: w })}>{w.toLocaleString()} mL</button>)}
@@ -58,10 +62,11 @@ export default function Settings() {
         <h2 className="h2 m-0">People following along</h2>
         <p className="m-0 text-muted">They can look but never change anything. Mood, notes, exam scores and water are never shared.</p>
         <form onSubmit={doInvite} className="flex gap-2">
-          <label htmlFor="iv" className="sr-only">Email to invite</label>
-          <input id="iv" type="email" required className="input flex-1" placeholder="name@example.com" value={email} onChange={e => setEmail(e.target.value)} />
-          <button className="btn-primary">Invite</button>
+          <label htmlFor="iv" className="sr-only">Who is this invite for?</label>
+          <input id="iv" required maxLength={40} className="input flex-1" placeholder="Their name, e.g. Mum" value={label} onChange={e => setLabel(e.target.value)} />
+          <button className="btn-primary">Create invite</button>
         </form>
+        {fresh && <InviteLink g={fresh} />}
         {grants.length === 0 && <p className="hint m-0">Nobody yet.</p>}
         {grants.map(g => <GrantRow key={g.id} g={g} onPerm={(k, v) => setGrant(g.id, { permissions: { ...g.permissions, [k]: v } })}
           onRevoke={() => setGrant(g.id, { status: g.status === 'revoked' ? 'active' : 'revoked' })} onRemove={() => removeGrant(g.id)} />)}
@@ -94,20 +99,40 @@ export default function Settings() {
 
 function GrantRow({ g, onPerm, onRevoke, onRemove }: { g: Grant; onPerm: (k: keyof SharePermissions, v: boolean) => void; onRevoke: () => void; onRemove: () => void }) {
   const [open, setOpen] = useState(false)
-  const status = g.status === 'pending' ? 'Invite saved, not accepted yet' : g.status === 'active' ? 'Can view' : 'Access paused'
+  const status = g.status === 'pending' ? 'Invite link not used yet' : g.status === 'active' ? 'Can view' : 'Access paused'
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div><p className="m-0 font-semibold">{g.invite_email}</p><p className="hint m-0">{status}</p></div>
+        <div><p className="m-0 font-semibold">{g.label || g.invite_email || "Guest"}</p><p className="hint m-0">{status}</p></div>
         <div className="flex gap-2">
           <button type="button" className="btn-secondary min-h-11 px-3.5 text-sm" aria-expanded={open} onClick={() => setOpen(o => !o)}>What they see</button>
           {g.status !== 'pending' && <button type="button" className="btn-secondary min-h-11 px-3.5 text-sm" onClick={onRevoke}>{g.status === 'revoked' ? 'Resume' : 'Pause'}</button>}
           <button type="button" className="btn-secondary min-h-11 px-3.5 text-sm" onClick={onRemove}>Remove</button>
         </div>
       </div>
+      {g.status === 'pending' && <InviteLink g={g} />}
       {open && SHARE_LABELS.map(([k, label]) => (
         <label key={k} className="flex min-h-12 items-center justify-between gap-3"><span>{label}</span>
           <input type="checkbox" className="size-6 accent-rose" checked={!!g.permissions[k]} onChange={e => onPerm(k, e.target.checked)} /></label>))}
+    </div>
+  )
+}
+
+export const inviteUrl = (code: string) => `${window.location.origin}${window.location.pathname}#/join/${code}`
+
+function InviteLink({ g }: { g: Grant }) {
+  const [copied, setCopied] = useState(false)
+  const url = inviteUrl(g.invite_code)
+  const msg = `Hi${g.label ? ' ' + g.label : ''}! Follow my Step 1 progress here: ${url}  (create an account, it's free)`
+  const copy = async () => { try { await navigator.clipboard.writeText(msg); setCopied(true) } catch { setCopied(false) } }
+  return (
+    <div className="flex flex-col gap-2 rounded-xl bg-rose-soft p-3.5">
+      <p className="m-0 text-[15px]">Send this private link to {g.label || 'them'}. It works once, for one person.</p>
+      <p className="m-0 break-all rounded-lg bg-surface px-3 py-2 font-mono text-sm">{url}</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn-primary min-h-11" onClick={copy}>{copied ? 'Copied' : 'Copy message'}</button>
+        <a className="btn-secondary min-h-11" href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer">Send on WhatsApp</a>
+      </div>
     </div>
   )
 }

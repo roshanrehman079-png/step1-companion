@@ -5,7 +5,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const DAILY_LIMIT = 30
-const MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-flash-latest'
+// Tried in order until one answers. GEMINI_MODEL (optional secret) goes first.
+const MODELS = [Deno.env.get('GEMINI_MODEL'), 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.0-flash'].filter(Boolean) as string[]
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -26,14 +27,14 @@ Rules:
 
 type Msg = { role: 'user' | 'model'; text: string }
 
-async function callGemini(key: string, catName: string, history: Msg[], withSearch: boolean) {
+async function callGemini(model: string, key: string, catName: string, history: Msg[], withSearch: boolean) {
   const body: Record<string, unknown> = {
     systemInstruction: { parts: [{ text: persona(catName) }] },
     contents: history.slice(-8).map(m => ({ role: m.role, parts: [{ text: m.text.slice(0, 2000) }] })),
     generationConfig: { temperature: 0.4, maxOutputTokens: 700 },
   }
   if (withSearch) body.tools = [{ google_search: {} }]
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body),
   })
   const data = await r.json().catch(() => ({}))
@@ -42,6 +43,13 @@ async function callGemini(key: string, catName: string, history: Msg[], withSear
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  try { return await handle(req) } catch (e) {
+    console.error('ask-mochi crashed', e)
+    return json({ error: 'crash', detail: String(e) }, 500)
+  }
+})
+
+async function handle(req: Request): Promise<Response> {
   if (req.method !== 'POST') return json({ error: 'method' }, 405)
   const key = Deno.env.get('GEMINI_API_KEY')
   if (!key) return json({ error: 'not-configured' }, 503)
@@ -68,12 +76,24 @@ Deno.serve(async (req) => {
   if (used >= DAILY_LIMIT) return json({ error: 'limit', limit: DAILY_LIMIT }, 429)
 
   const catName = `Dr. ${String(profile.cat_name || 'Mochi').replace(/^dr\.?\s+/i, '')}`
-  // Try with Google Search grounding first; the free tier may not include it, so fall back.
-  let res = await callGemini(key, catName, messages, true)
-  let searched = true
-  if (!res.ok && [400, 403, 429].includes(res.status)) { res = await callGemini(key, catName, messages, false); searched = false }
-  if (!res.ok) return json({ error: 'ai', status: res.status, detail: res.data?.error?.message ?? '' }, 502)
-
+  // For each model: try with Google Search grounding (often not on the free tier), then without.
+  let res: Awaited<ReturnType<typeof callGemini>> | null = null
+  let searched = false
+  const tried: string[] = []
+  outer: for (const model of MODELS) {
+    for (const withSearch of [true, false]) {
+      res = await callGemini(model, key, catName, messages, withSearch)
+      tried.push(`${model}${withSearch ? '+search' : ''}:${res.status}`)
+      if (res.ok && res.data?.candidates?.[0]?.content?.parts?.length) { searched = withSearch; break outer }
+      const msg = String(res.data?.error?.message ?? '')
+      // Problems no other model will fix: bad key, unsupported location, quota.
+      if (/API key|location is not supported|quota/i.test(msg) && !withSearch) break outer
+    }
+  }
+  if (!res || !res.ok) {
+    console.error('gemini failed', tried.join(' '), JSON.stringify(res?.data?.error ?? {}))
+    return json({ error: 'ai', status: res?.status ?? 0, detail: `${res?.data?.error?.message ?? 'no answer'} [${tried.join(' ')}]` }, 502)
+  }
   const cand = res.data?.candidates?.[0]
   const text = (cand?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('').trim()
   const chunks = cand?.groundingMetadata?.groundingChunks ?? []
@@ -81,4 +101,4 @@ Deno.serve(async (req) => {
 
   await admin.from('ai_usage').upsert({ owner_id: u.user.id, day, count: used + 1 })
   return json({ text: text || 'Hmm, I could not find a good answer. Try asking another way?', sources, searched, left: DAILY_LIMIT - used - 1 })
-})
+}

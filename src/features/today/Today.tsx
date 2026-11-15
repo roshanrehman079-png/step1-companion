@@ -1,11 +1,11 @@
 // Today: Check in -> Do (one numbered list) -> Wrap up. The heart of the app.
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../../state/AppContext'
 import { DayPill, MochiSays, Stepper, Bar } from '../../components/ui'
-import { MOODS, DAY_SOURCE } from '../../content/strings'
+import { MOODS } from '../../content/strings'
 import { line } from '../../content/mochi'
-import { tasksFor, type TaskTemplate } from '../../content/tasks'
+import { tasksOf, timeline, ticked, pending, pretty, hours, type Timed } from '../../lib/schedule'
 import { addDays, daysBetween, fmtLong, fmtShort } from '../../lib/dates'
 import { goalFor, moodOn, onDate, questionTotals, waterOn, bookPercents, live } from '../../lib/progress'
 import type { Mood, StudyDay } from '../../lib/types'
@@ -102,80 +102,88 @@ function greeting() {
 }
 
 function DoStep({ day, mood, header, onFinish, catName }: { day: StudyDay; mood: Mood; header: React.ReactNode; onFinish: () => void; catName: string }) {
-  const { events, profile, today, logEvent, voidEvent, say, setFocusMode, addNote } = useApp()
+  const { events, profile, today, days, tickTask, untickTask, say, setFocusMode, addNote, logEvent } = useApp()
   const goal = goalFor(day, mood, events, profile!.daily_hours, profile!.qbank_start)
-  const pending = goal.kind === 'questions' ? goal.pending ?? 0 : 0
-  const blocks = goal.kind === 'questions' ? Math.ceil(goal.target / 20) : 0
-  const tasks = useMemo(() => tasksFor(day.mode, { pendingReviews: pending, blocks }), [day.mode, pending, blocks])
-  const stepEvents = onDate(events, today).filter(e => e.kind === 'step')
-  const doneIdx = new Set(stepEvents.map(e => Number(e.payload.i)))
-  const current = tasks.findIndex((t, i) => !doneIdx.has(i) && !t.optional)
-  const [focus, setFocus] = useState<{ i: number; minutes: number } | null>(null)
-  const [log, setLog] = useState<{ i: number; kind: LogKind } | null>(null)
-  const sprint = goal.sprint || 45
+  const tl = timeline(tasksOf(day), day.start_time ?? profile!.day_start ?? '08:00')
+  const done = ticked(events, day.day)
+  // Mood makes blocks beyond today's smaller goal optional (display only; the plan itself doesn't change).
+  const blocksToday = goal.kind === 'questions' ? Math.ceil(goal.target / 20) : 99
+  let blockN = 0
+  const shown = tl.map(t => { if (t.kind === 'block') blockN++; return { ...t, optionalToday: t.optional || (t.kind === 'block' && blockN > blocksToday) } })
+  const current = shown.find(t => t.kind !== 'break' && !t.optionalToday && !done.has(t.id))
+  const [focus, setFocus] = useState<{ id: string; minutes: number; title: string } | null>(null)
+  const [log, setLog] = useState<{ id: string; kind: LogKind } | null>(null)
   const fresh = onDate(events, today).filter(e => e.kind === 'qblock').reduce((a, e) => a + Number(e.payload.fresh || 0), 0)
   const bookNow = day.book_subject ? bookPercents(events)[day.book_subject] ?? 0 : 0
+  const backlog = pending(days, events, today, profile!.onboarded_at?.slice(0, 10) ?? today)
+  const req = shown.filter(t => t.kind !== 'break' && !t.optionalToday)
+  const doneN = req.filter(t => done.has(t.id)).length
 
-  const finishTask = (i: number, t: TaskTemplate) => {
+  const complete = (t: Timed) => {
     setFocus(null); setFocusMode(false)
-    const kind: LogKind | null = t.kind === 'plain' ? null : t.kind
-    if (kind) setLog({ i, kind }); else markDone(i)
+    if (['block', 'read', 'review', 'notes', 'score'].includes(t.kind)) setLog({ id: t.id, kind: t.kind as LogKind })
+    else markDone(t.id)
   }
-  const markDone = async (i: number) => { if (await logEvent('step', { i })) say('logged', 'happy') }
+  const markDone = async (id: string) => { if (await tickTask(day, id)) say('logged', 'happy') }
 
   return (
     <div className="flex flex-col gap-5">
       {header}
       <Stepper active={1} />
       <MochiSays text={line(DAY_LINE[day.mode])} mood="happy" />
-      <section aria-label="Today's job" className="card flex flex-col gap-3 md:p-6">
-        <div className="flex items-center justify-between gap-2"><DayPill mode={day.mode} /><span className="hint">{DAY_SOURCE[day.mode] ?? ''}</span></div>
+      {backlog.length > 0 && <Link to="/planner?tab=pending" className="card flex items-center justify-between gap-3 border-exam-fg/30 bg-exam-bg text-ink no-underline">
+        <span><b className="block">{backlog.length} pending from earlier days</b><span className="text-[15px]">Tick them off, move them, or let them go.</span></span><span className="btn-secondary min-h-11 px-4 text-sm">Review</span></Link>}
+      <section aria-label="Today's plan" className="card flex flex-col gap-3 md:p-6">
+        <div className="flex items-center justify-between gap-2"><DayPill mode={day.mode} /><span className="hint">{doneN} of {req.length} done</span></div>
         <h2 className="m-0 text-[22px] font-bold leading-tight">{day.topic}</h2>
-        {goal.kind === 'questions' && <p className="m-0 text-muted">Goal today: <b className="text-ink">{goal.target ? `${goal.target} new questions` : 'one gentle block, or rest'}</b>{goal.target !== day.q_core && ` (smaller because you're ${mood})`}. Done so far: <b className="text-ink">{fresh}</b>.</p>}
+        {goal.kind === 'questions' && <p className="m-0 text-muted">Goal today: <b className="text-ink">{goal.target ? `${goal.target} new questions` : 'one gentle block, or rest'}</b>{goal.target < day.q_core && ` (smaller because you're ${mood}, extra blocks are optional)`}. Done so far: <b className="text-ink">{fresh}</b>.</p>}
         {goal.kind === 'book' && <>
-          <p className="m-0 text-muted">Goal today: reach <b className="text-ink">{goal.target}%</b> of {subjectName(day.book_subject!)}. No UWorld today, on purpose.</p>
+          <p className="m-0 text-muted">Goal today: reach <b className="text-ink">{goal.target}%</b> of {subjectName(day.book_subject!)}.</p>
           <Bar pct={bookNow} marker={goal.target} label={`Chapter ${bookNow}% done, goal ${goal.target}%`} />
         </>}
-        {goal.kind === 'other' && <p className="m-0 text-muted">{day.instructions}</p>}
-        {day.extra.carry?.map(c => <p key={c.from} className="m-0 rounded-xl bg-rose-soft px-3 py-2 text-[15px]">Optional extra from {fmtShort(c.from)}: {c.pct}% of {subjectName(c.subject)}.</p>)}
+        {day.instructions && goal.kind === 'other' && <p className="m-0 text-muted">{day.instructions}</p>}
         <ol className="m-0 list-none border-t border-line p-0">
-          {tasks.map((t, i) => {
-            const done = doneIdx.has(i); const now = i === current
+          {shown.map(t => {
+            const isDone = done.has(t.id); const now = current?.id === t.id
+            if (t.kind === 'break') return (
+              <li key={t.id} className="flex items-center gap-3 border-b border-line py-2 text-muted">
+                <span className="w-[84px] shrink-0 text-sm tabular-nums">{pretty(t.start)}</span><span className="text-[15px]">{t.title}, {hours(t.minutes)}</span>
+              </li>)
             return (
-              <li key={i} className="flex items-start gap-3 border-b border-line py-3">
-                <span aria-hidden className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full text-[15px] font-bold ${done ? 'bg-rose text-white' : now ? 'border-2 border-rose text-rose' : 'border border-field text-muted'}`}>{done ? '✓' : i + 1}</span>
+              <li key={t.id} className={`flex items-start gap-3 border-b border-line py-3 ${now ? 'bg-rose-soft/40 -mx-4 px-4 md:-mx-6 md:px-6' : ''}`}>
+                <span className="w-[72px] shrink-0 pt-1 text-sm font-semibold tabular-nums text-muted">{pretty(t.start)}</span>
                 <div className="min-w-0 flex-1">
-                  <p className={`m-0 text-[17px] ${done ? 'text-muted line-through' : now ? 'font-semibold' : ''}`}>{t.title}{t.optional && <span className="text-muted"> (optional)</span>}</p>
-                  <p className="hint m-0">{t.detail}</p>
-                  {!done && (now || t.optional) && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {t.minutes > 0 && <button type="button" className="btn-primary" onClick={() => { setFocus({ i, minutes: Math.min(t.minutes, sprint) }); setFocusMode(true) }}>Start {Math.min(t.minutes, sprint)}-min focus</button>}
-                      <button type="button" className="btn-secondary" onClick={() => finishTask(i, t)}>{t.kind === 'plain' ? 'Mark done' : 'Done, log it'}</button>
-                    </div>
-                  )}
-                  {done && <button type="button" className="btn-text min-h-10 px-0 text-sm" onClick={() => { const ev = stepEvents.filter(e => Number(e.payload.i) === i).at(-1); if (ev) voidEvent(ev.id) }}>Undo</button>}
+                  <p className={`m-0 text-[17px] ${isDone ? 'text-muted line-through' : now ? 'font-semibold' : ''}`}>{t.title}{t.optionalToday && <span className="text-muted"> (optional)</span>}</p>
+                  <p className="hint m-0">{hours(t.minutes)}, until {pretty(t.end)}{t.detail ? `. ${t.detail}` : ''}{t.from ? `. Moved from ${fmtShort(t.from)}` : ''}</p>
+                  {!isDone && now && t.minutes > 0 && <button type="button" className="btn-primary mt-2" onClick={() => { setFocus({ id: t.id, minutes: Math.min(t.minutes, goal.sprint || 45), title: t.title }); setFocusMode(true) }}>Start {Math.min(t.minutes, goal.sprint || 45)}-min focus</button>}
                 </div>
-              </li>
-            )
+                <label className="flex size-12 shrink-0 cursor-pointer items-center justify-center">
+                  <input type="checkbox" className="size-7 accent-rose" aria-label={`${isDone ? 'Untick' : 'Tick off'}: ${t.title}`} checked={isDone}
+                    onChange={() => (isDone ? untickTask(day, t.id) : complete(t))} />
+                </label>
+              </li>)
           })}
         </ol>
-        <button type="button" className={current === -1 ? 'btn-primary' : 'btn-secondary'} onClick={onFinish}>{current === -1 ? 'Wrap up the day' : 'Stop here and wrap up'}</button>
+        <div className="flex flex-wrap gap-2">
+          <Link to={`/planner?day=${day.day}`} className="btn-secondary">Edit today's plan</Link>
+          <button type="button" className={current ? 'btn-secondary' : 'btn-primary'} onClick={onFinish}>{current ? 'Stop here and wrap up' : 'Wrap up the day'}</button>
+        </div>
       </section>
       <div className="grid gap-3 md:grid-cols-2">
         <WaterCard />
         {profile!.ai_enabled && <Link to="/ask" className="card flex items-center justify-between gap-2 no-underline text-ink hover:border-rose">
           <span><b className="block">Stuck on something?</b><span className="hint">Ask {catName}</span></span><span className="btn-secondary min-h-11 px-4 text-sm">Ask</span></Link>}
       </div>
-      <p className="hint text-center">Feeling different? <button type="button" className="btn-text inline min-h-0 p-0" onClick={() => { const c = onDate(events, today).filter(e => e.kind === 'checkin').at(-1); if (c) voidEvent(c.id) }}>Check in again</button></p>
+      <p className="hint text-center">Feeling different? <button type="button" className="btn-text inline min-h-0 p-0" onClick={async () => { const c = onDate(events, today).filter(e => e.kind === 'checkin').at(-1); if (c) await logEvent('checkin', { mood: null, reset: true }) }}>Check in again</button></p>
 
-      {focus && <FocusTimer minutes={focus.minutes} title={tasks[focus.i].title} onDone={() => finishTask(focus.i, tasks[focus.i])} onExit={() => { setFocus(null); setFocusMode(false) }} />}
+      {focus && <FocusTimer minutes={focus.minutes} title={focus.title} onDone={() => { const t = shown.find(x => x.id === focus.id); if (t) complete(t) }} onExit={() => { setFocus(null); setFocusMode(false) }} />}
       <LogSheet open={!!log} kind={log?.kind ?? 'plain'} day={day} bookNow={bookNow} pendingReviews={questionTotals(events, profile!.qbank_start).reviewPending}
         onClose={() => setLog(null)}
         onSaved={async (payloadKind, payload) => {
-          const i = log!.i
+          const id = log!.id
           if (payloadKind === 'note') { const ok = await addNote(payload as { body: string }); if (!ok) return }
           else if (payloadKind) { const ev = await logEvent(payloadKind, payload); if (!ev) return }
-          setLog(null); await markDone(i)
+          setLog(null); await markDone(id)
         }} />
     </div>
   )

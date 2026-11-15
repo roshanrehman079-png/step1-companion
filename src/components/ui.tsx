@@ -83,8 +83,8 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   return (
     <dialog ref={ref} onClose={onClose} aria-label={title}
       className="m-auto mb-0 w-full max-w-lg rounded-t-3xl border-0 bg-paper p-0 text-ink backdrop:bg-ink/40 md:mb-auto md:rounded-3xl">
-      <div className="flex flex-col gap-4 p-5">
-        <div className="flex items-center justify-between gap-3">
+      <div className="flex max-h-[88dvh] flex-col gap-4 overflow-y-auto p-5">
+        <div className="sticky -top-5 z-10 -mx-5 -mt-5 flex items-center justify-between gap-3 bg-paper px-5 pb-2 pt-5">
           <h2 className="h2 m-0">{title}</h2>
           <button type="button" className="btn-secondary min-h-11 px-4 text-sm" onClick={onClose}>Close</button>
         </div>
